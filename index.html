@@ -91,26 +91,58 @@
       font-weight: bold;
     }
 
-    /* Animaciones para parpadeo (Vencimientos) */
-    @keyframes parpadeo-rojo {
-      0%   { background-color: rgba(255, 0, 0, 0.2); }
-      50%  { background-color: transparent; }
-      100% { background-color: rgba(255, 0, 0, 0.2); }
+    /* Animaciones para parpadeo */
+    @keyframes parpadeo-morado {
+  0%, 100% { background-color: rgba(128, 0, 128, 0.7); }
+  50%      { background-color: transparent; }
+}
+.blink-purple {
+  animation: parpadeo-morado 2s infinite;
+}
+
+@keyframes parpadeo-rojo {
+  0%, 100% { background-color: rgba(255, 0, 0, 0.7); }
+  50%      { background-color: transparent; }
+}
+.blink-red {
+  animation: parpadeo-rojo 2s infinite;
+}
+
+@keyframes parpadeo-amarillo {
+  0%, 100% { background-color: rgba(255, 255, 0, 0.7); }
+  50%      { background-color: transparent; }
+}
+.blink-yellow {
+  animation: parpadeo-amarillo 2s infinite;
+}
+
+
+    /* Filtros (Vencimientos) */
+    #filtrosV {
+      text-align: center;
+      margin-bottom: 10px;
     }
-    .blink-red {
-      animation: parpadeo-rojo 1s infinite;
+    #filtrosV button {
+      margin: 0 5px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      border: 1px solid #005a9e;
+      border-radius: 4px;
+      background-color: #fff;
+      color: #005a9e;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    #filtrosV button:hover {
+      background-color: #e0f0ff;
+    }
+    #filtrosV button.active {
+      background-color: #005a9e;
+      color: #fff;
     }
 
-    @keyframes parpadeo-amarillo {
-      0%   { background-color: rgba(255, 255, 0, 0.3); }
-      50%  { background-color: transparent; }
-      100% { background-color: rgba(255, 255, 0, 0.3); }
-    }
-    .blink-yellow {
-      animation: parpadeo-amarillo 1s infinite;
-    }
-
-    /* Filtros */
+    /* Filtros (Otros) */
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -193,6 +225,22 @@
     .modal tr.total-row {
       background-color: #e6e6e6;
     }
+
+    /* Ajustes para pantallas muy pequeñas */
+    @media (max-width: 600px) {
+      th, td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+      }
+      table {
+        font-size: 0.85rem;
+      }
+      #filtrosV button {
+        margin: 3px 2px;
+        padding: 4px 6px;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -237,10 +285,28 @@
       </div>
     </div>
 
-    <!-- VENCIMIENTOS PRÓXIMOS (< 30 DÍAS) -->
+    <!-- VENCIMIENTOS PRÓXIMOS -->
     <div class="section" id="sectionVencimientos">
       <div class="section-header">
-        <h2>Vencimientos Próximos (menos de 30 días)</h2>
+        <h2>Vencimientos</h2>
+      </div>
+      <!-- Botones de filtro para Vencimientos -->
+      <div id="filtrosV">
+        <button id="btn30" data-filter="30" onclick="toggleFilter('30')">
+          Vencidos o &lt; 30 días
+        </button>
+        <button id="btn60" data-filter="60" onclick="toggleFilter('60')">
+          31–60 días
+        </button>
+        <button id="btn90" data-filter="90" onclick="toggleFilter('90')">
+          61–90 días
+        </button>
+        <button id="btn91" data-filter="91" onclick="toggleFilter('91')">
+          &gt; 90 días
+        </button>
+        <button id="btnAll" data-filter="all" onclick="toggleFilter('all')">
+          TODO STOCK
+        </button>
       </div>
       <div id="tablaVencimientos"></div>
     </div>
@@ -250,7 +316,6 @@
       <div class="section-header">
         <h2>RESUMEN UBICACIONES DISPONIBLES</h2>
       </div>
-      <!-- Filtros para CSV Adicional: Bodega, Rackeo y Nivel (deshabilitado inicialmente) -->
       <div class="filters">
         <div class="filter-group">
           <label for="filterBodegaAd">Bodega:</label>
@@ -278,27 +343,23 @@
     </div>
 
     <!-- UBICACIONES EN TRANSITO -->
-<div class="section narrow-section" id="sectionTransito">
-  <div class="section-header">
-    <h2>RESUMEN UBICACIONES TRANSITO</h2>
-  </div>
-
-  <div class="filters">
-    <div class="filter-group">
-      <label for="filtroBodegaTransito">Bodega:</label>
-      <select id="filtroBodegaTransito">
-        <option value="Todas">Todas</option>
-      </select>
+    <div class="section narrow-section" id="sectionTransito">
+      <div class="section-header">
+        <h2>RESUMEN UBICACIONES TRANSITO</h2>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label for="filtroBodegaTransito">Bodega:</label>
+          <select id="filtroBodegaTransito">
+            <option value="Todas">Todas</option>
+          </select>
+        </div>
+      </div>
+      <div id="tablaTransito"></div>
+      <div class="chart-container">
+        <div id="chartTransito" style="width:100%; height:100%;"></div>
+      </div>
     </div>
-  </div>
-
-  <div id="tablaTransito"></div>
-  <div class="chart-container">
-    <div id="chartTransito" style="width:100%; height:100%;"></div>
-  </div>
-</div>
-
-
 
   </div>
 
@@ -312,6 +373,32 @@
   </div>
 
   <script>
+    // --------------------------------------------------------
+    // Variables de filtro para Vencimientos
+    let currentFilter = '30'; // Por defecto, mostrar ≤ 30 días
+    // Cambia o quita el filtro: si se hace clic en el mismo filtro activo, vuelve a 'all'
+    function toggleFilter(filterValue) {
+      if (currentFilter === filterValue) {
+        currentFilter = 'all';
+      } else {
+        currentFilter = filterValue;
+      }
+      actualizarBotones();
+      dibujarTablaVencimientos();
+    }
+    // Actualiza clases "active" en botones según currentFilter
+    function actualizarBotones() {
+      const botones = document.querySelectorAll('#filtrosV button');
+      botones.forEach(btn => {
+        const valor = btn.getAttribute('data-filter');
+        if (valor === currentFilter) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
     // URLs CSV
     const CSV_URL_BASE =
       "https://docs.google.com/spreadsheets/d/e/" +
@@ -327,8 +414,6 @@
     let nivelesUnicos = [];
     let resumenBodega = [];
     let granTotalBodega = 0;
-
-    // Datos CSV Adicional normalizados (solo para el resumen por estado)
     let datosCsvAdicional = [];
 
     // ----------------------------------------------------------
@@ -408,13 +493,14 @@
         "chartBodega",
         resumenBodega.filter(r => r.clave !== "Suma total").map(r => r.clave),
         resumenBodega.filter(r => r.clave !== "Suma total").map(r => r.totalNumRaw),
-        "Total $ por Bodega"
+        "<b>Total $ por Bodega</b>"
       );
 
       // Inicializar “Por Familia”
       actualizarFamiliaYNivel("Todas", "Todos");
 
-      // Render “Vencimientos Próximos (< 30 días)”
+      // Configurar botones de filtro de Vencimientos y dibujar por primera vez
+      actualizarBotones();
       dibujarTablaVencimientos();
 
       // Carga y resumen de CSV Adicional para Resumen de Ubicaciones por Estado
@@ -422,16 +508,29 @@
     });
 
     // ----------------------------------------------------------
-    // 2) Función para dibujar “Vencimientos Próximos (< 30 días)”
-    //    con parpadeo rojo (≤ 4 días) y amarillo (5–10 días)
+    // 2) Función para dibujar “Vencimientos” con filtros
     // ----------------------------------------------------------
     function dibujarTablaVencimientos() {
       const hoy = new Date();
-      let itemsProx = datosVálidos.filter(r => {
-        const diffDias = (r["_FECHA"] - hoy) / (1000 * 60 * 60 * 24);
-        return diffDias >= 0 && diffDias < 30;
+      // Filtrar según currentFilter
+      let itemsFiltrados = datosVálidos.slice();
+      itemsFiltrados = itemsFiltrados.filter(r => {
+        const diffDias = Math.floor((r["_FECHA"] - hoy) / (1000 * 60 * 60 * 24));
+        if (currentFilter === '30') {
+          return diffDias <= 30;
+        } else if (currentFilter === '60') {
+          return diffDias >= 31 && diffDias <= 60;
+        } else if (currentFilter === '90') {
+          return diffDias >= 61 && diffDias <= 90;
+        } else if (currentFilter === '91') {
+          return diffDias > 90;
+        } else if (currentFilter === 'all') {
+          return true;
+        }
+        return false;
       });
-      itemsProx.sort((a, b) => (a["_FECHA"] - hoy) - (b["_FECHA"] - hoy));
+      // Ordenar por fecha ascendente
+      itemsFiltrados.sort((a, b) => a["_FECHA"] - b["_FECHA"]);
 
       let sumMonto = 0;
       let html = `<table>
@@ -448,54 +547,58 @@
                       </tr>
                     </thead>
                     <tbody>`;
-      itemsProx.forEach(r => {
-        const d = r["_FECHA"];
-        const diffDias = Math.floor((d - hoy) / (1000 * 60 * 60 * 24));
-        const ubic = `${r["BODEGA"]}-${r["NIVEL"]}-${r["PASILLO"]}-${r["RACK"]}`;
-        const montoTrunc = Math.trunc(r["TOTAL $"]);
-        const unidadesMostrar = r["UNIDADES"] || 0;
-        const nivelUpper = r["NIVEL"].toUpperCase();
-        const fuerzaCeroBultos = nivelUpper.includes("PICKEO") || nivelUpper.includes("CHICLES");
-        const bultosMostrar = fuerzaCeroBultos ? 0 : (r["BULTOS"] || 0);
-        sumMonto += montoTrunc;
 
-        const dd = String(d.getDate()).padStart(2, "0");
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const yyyy = d.getFullYear();
-        const fechaFmt = `${dd}/${mm}/${yyyy}`;
-
-        // Asignar clase según diffDias:
-        //   ≤ 4 → .blink-red
-        //   5–10 → .blink-yellow
-        let claseFila = "";
-        if (diffDias <= 4) {
-          claseFila = "blink-red";
-        } else if (diffDias >= 5 && diffDias <= 10) {
-          claseFila = "blink-yellow";
-        }
-
-        html += `<tr class="${claseFila}">
-                   <td>${ubic}</td>
-                   <td>${r["CODIGO VENTA"] || ""}</td>
-                   <td>${r["DESCRIPCION"] || ""}</td>
-                   <td>${fechaFmt}</td>
-                   <td>${diffDias}</td>
-                   <td>${unidadesMostrar}</td>
-                   <td>${bultosMostrar}</td>
-                   <td>${montoTrunc.toLocaleString("es-CL", { minimumFractionDigits: 0 })}</td>
-                 </tr>`;
-      });
-
-      if (itemsProx.length === 0) {
-        html += `<tr><td colspan="8">No hay productos con vencimiento en los próximos 30 días.</td></tr>`;
+      if (itemsFiltrados.length === 0) {
+        html += `<tr><td colspan="8">No hay productos para el filtro seleccionado.</td></tr>`;
       } else {
+        itemsFiltrados.forEach(r => {
+          const d = r["_FECHA"];
+          const diffDias = Math.floor((d - hoy) / (1000 * 60 * 60 * 24));
+          const ubic = `${r["BODEGA"]}-${r["NIVEL"]}-${r["PASILLO"]}-${r["RACK"]}`;
+          const montoTrunc = Math.trunc(r["TOTAL $"]);
+          const unidadesMostrar = r["UNIDADES"] || 0;
+          const nivelUpper = r["NIVEL"].toUpperCase();
+          const fuerzaCeroBultos = nivelUpper.includes("PICKEO") || nivelUpper.includes("CHICLES");
+          const bultosMostrar = fuerzaCeroBultos ? 0 : (r["BULTOS"] || 0);
+          sumMonto += montoTrunc;
+
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          const fechaFmt = `${dd}/${mm}/${yyyy}`;
+
+          // Asignar clase según diffDias:
+          //   < 0 → .blink-purple
+          //   1–15 → .blink-red
+          //   16–30 → .blink-yellow
+          let claseFila = "";
+          if (diffDias < 0) {
+            claseFila = "blink-purple";
+          } else if (diffDias >= 1 && diffDias <= 15) {
+            claseFila = "blink-red";
+          } else if (diffDias >= 16 && diffDias <= 30) {
+            claseFila = "blink-yellow";
+          }
+
+          html += `<tr class="${claseFila}">
+                     <td>${ubic}</td>
+                     <td>${r["CODIGO VENTA"] || ""}</td>
+                     <td>${r["DESCRIPCION"] || ""}</td>
+                     <td>${fechaFmt}</td>
+                     <td>${diffDias}</td>
+                     <td>${unidadesMostrar}</td>
+                     <td>${bultosMostrar}</td>
+                     <td>${montoTrunc.toLocaleString("es-CL", { minimumFractionDigits: 0 })}</td>
+                   </tr>`;
+        });
+
         html += `<tr class="total-row">
                    <td colspan="7"></td>
                    <td><strong>${sumMonto.toLocaleString("es-CL", { minimumFractionDigits: 0 })}</strong></td>
                  </tr>`;
       }
-      html += `</tbody></table>`;
 
+      html += `</tbody></table>`;
       document.getElementById("tablaVencimientos").innerHTML = html;
     }
 
@@ -611,7 +714,7 @@
         .map(r => r.totalNumRaw);
 
       const tituloGrafFamilia =
-        "Total $ por Familia" +
+        "<b>Total $ por Familia</b>" +
         (bodegaSeleccionada !== "Todas" ? ` (Bodega: ${bodegaSeleccionada})` : "") +
         (nivelSeleccionado !== "Todos" ? ` / Nivel: ${nivelSeleccionado}` : "");
 
@@ -629,9 +732,9 @@
                     </thead>
                     <tbody>`;
       dataArr.forEach(row => {
-        const isTotal = row.clave === "Suma total";
+        const isTotal = row.clave === "Suma total" || row.clave === "Sin datos";
         const labelCell = isTotal
-          ? `<strong>TOTAL VALORIZADO</strong>`
+          ? `<strong>${isTotal && row.clave === "Suma total" ? "TOTAL VALORIZADO" : "Sin datos"}</strong>`
           : row.clave;
 
         const valorCelda = isTotal
@@ -748,16 +851,41 @@
         type: "pie",
         marker: { colors: colors, line: { color: "#fff", width: 1 } },
         textinfo: "label+percent",
+        textfont: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
         customdata: formattedVals,
         hovertemplate: "%{label} %{customdata}<br>%{percent}",
         showlegend: true
       };
 
       const layout = {
-        title: title,
-        titlefont: { size: 16 },
-        legend: { orientation: "v", x: 1.02, y: 0.5 },
-        margin: { t: 60, b: 20, l: 20, r: 100 }
+        title: {
+          text: title,
+          font: {
+            size: 20,
+            family: "Arial Black, Arial, sans-serif",
+            color: "#000"
+          }
+        },
+        font: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
+        legend: {
+          orientation: "v",
+          x: 1.02,
+          y: 0.5,
+          font: {
+            size: 14,
+            family: "Arial Black, Arial, sans-serif",
+            color: "#000"
+          }
+        },
+        margin: { t: 80, b: 20, l: 20, r: 100 }
       };
 
       Plotly.newPlot(containerId, [trace], layout, {
@@ -798,18 +926,20 @@
 
         // Generar resumen inicial con filtros “Todas” / “Todos” / “Todos”
         generarResumenEstado();
+
+        // Preparar sección Transito
+        poblarFiltroBodegaTransito();
+        generarTablaTransito();
       });
     }
 
-    // Poblar select de filtros para CSV Adicional (Bodega y Rackeo)
+    // Poblar filtros para CSV Adicional (Bodega y Rackeo)
     function poblarFiltrosCsvAdicional() {
       const selectBodAd = document.getElementById("filterBodegaAd");
       const selectRackeoAd = document.getElementById("filterRackeoAd");
       const selectNivelAd = document.getElementById("filterNivelAd");
 
-      // Extraer valores únicos de BODEGA (columna R)
       const setBod = new Set();
-      // Extraer valores únicos de RACKEO (columna S), ignorar “TRANSITO”
       const setRackeo = new Set();
 
       datosCsvAdicional.forEach(r => {
@@ -819,14 +949,12 @@
         if (rack && rack !== "TRANSITO") setRackeo.add(rack);
       });
 
-      // Ordenar y añadir opciones de BODEGA
       Array.from(setBod).sort().forEach(b => {
         const opt = document.createElement("option");
         opt.value = b;
         opt.text = b;
         selectBodAd.appendChild(opt);
       });
-      // Ordenar y añadir opciones de RACKEO
       Array.from(setRackeo).sort().forEach(rk => {
         const opt = document.createElement("option");
         opt.value = rk;
@@ -834,30 +962,23 @@
         selectRackeoAd.appendChild(opt);
       });
 
-      // Deshabilitar NIVEL hasta que se seleccione una bodega distinta de “Todas”
       selectNivelAd.disabled = true;
 
-      // Listener: cuando cambie la bodega, actualizamos NIVEL y regeneramos resumen
       selectBodAd.addEventListener("change", function() {
         const selB = this.value;
         actualizarNivelOptionsAd(selB);
         generarResumenEstado();
       });
-
-      // Listener: regenerar resumen si cambia Rackeo
       selectRackeoAd.addEventListener("change", generarResumenEstado);
-
-      // Listener: regenerar resumen si cambia Nivel
       selectNivelAd.addEventListener("change", generarResumenEstado);
     }
 
-    // Actualizar opciones del filtro “Nivel” (columna T) según Bodega seleccionada
+    // Actualizar opciones de Nivel para CSV Adicional
     function actualizarNivelOptionsAd(bodegaSeleccionada) {
       const selectNivelAd = document.getElementById("filterNivelAd");
       selectNivelAd.innerHTML = "";
 
       if (bodegaSeleccionada === "Todas") {
-        // Si está en “Todas”, deshabilitamos Nivel y lo ponemos a “Todos”
         const optTodos = document.createElement("option");
         optTodos.value = "Todos";
         optTodos.text = "Todos";
@@ -866,11 +987,12 @@
         return;
       }
 
-      // Si se escogió una bodega específica, habilitamos el select de Nivel
       selectNivelAd.disabled = false;
+      const optTodos = document.createElement("option");
+      optTodos.value = "Todos";
+      optTodos.text = "Todos";
+      selectNivelAd.appendChild(optTodos);
 
-      // Recolectar niveles únicos de esa bodega, excluyendo filas cuyo RACKEO = “TRANSITO”
-      // y también descartando NIVEL = "TRANSITO" si existiera
       const setNivel = new Set();
       datosCsvAdicional.forEach(r => {
         const b = (r["BODEGA"] || "").toString().trim();
@@ -886,13 +1008,6 @@
         }
       });
 
-      // Añadimos siempre la primera opción “Todos”
-      const optTodos = document.createElement("option");
-      optTodos.value = "Todos";
-      optTodos.text = "Todos";
-      selectNivelAd.appendChild(optTodos);
-
-      // Convertir a array ordenado y llenar el selector
       Array.from(setNivel).sort().forEach(nv => {
         const opt = document.createElement("option");
         opt.value = nv;
@@ -901,13 +1016,12 @@
       });
     }
 
-    // Generar resumen y gráfico por ESTADO basados en filtros seleccionados
+    // Generar resumen por Estado para CSV Adicional
     function generarResumenEstado() {
       const selBod = document.getElementById("filterBodegaAd").value;
       const selRack = document.getElementById("filterRackeoAd").value;
       const selNivel = document.getElementById("filterNivelAd").value;
 
-      // Filtrar datos: tomar filas 0–811, excluir ESTADO o RACKEO = "TRANSITO"
       let filtrados = datosCsvAdicional.filter(r => {
         const estadoRaw = (r["ESTADO"] || "").toString().trim().toUpperCase();
         const rackeoRaw = (r["RACKEO"] || "").toString().trim().toUpperCase();
@@ -915,23 +1029,19 @@
         return true;
       });
 
-      // Aplicar filtro de BODEGA si no es "Todas"
       if (selBod !== "Todas") {
         filtrados = filtrados.filter(r => {
           const b = (r["BODEGA"] || "").toString().trim();
           return b === selBod;
         });
       }
-      // Aplicar filtro de RACKEO si no es "Todos"
       if (selRack !== "Todos") {
         filtrados = filtrados.filter(r => (r["RACKEO"] || "").toString().trim().toUpperCase() === selRack);
       }
-      // Aplicar filtro de NIVEL si no es "Todos" y el selector está habilitado
       if (!document.getElementById("filterNivelAd").disabled && selNivel !== "Todos") {
         filtrados = filtrados.filter(r => (r["NIVEL"] || "").toString().trim() === selNivel);
       }
 
-      // Contar por ESTADO (solo DISPONIBLE / NO DISPONIBLE)
       const conteoPorEstado = { "DISPONIBLE": 0, "NO DISPONIBLE": 0 };
       let totalConsiderado = 0;
       filtrados.forEach(r => {
@@ -945,7 +1055,6 @@
         }
       });
 
-      // Construir arreglo para la tabla de resumen
       const resumenEstArr = [
         {
           estado: "DISPONIBLE",
@@ -970,7 +1079,6 @@
         pct: totalConsiderado > 0 ? "100 %" : "0,0 %"
       });
 
-      // Construcción de la tabla HTML de resumen
       let htmlEstado = `<table>
                           <thead>
                             <tr>
@@ -991,7 +1099,6 @@
       htmlEstado += `</tbody></table>`;
       document.getElementById("tablaResumenEstado").innerHTML = htmlEstado;
 
-      // Preparar datos para el gráfico circular (solo DISPONIBLE y NO DISPONIBLE)
       const labels = resumenEstArr
         .filter(r => r.estado !== "Total")
         .map(r => r.estado);
@@ -999,7 +1106,6 @@
         .filter(r => r.estado !== "Total")
         .map(r => r.cuenta);
 
-      // Dibujar gráfico circular
       const formattedVals = values.map(v =>
         v.toLocaleString("es-CL", { minimumFractionDigits: 0 })
       );
@@ -1011,15 +1117,40 @@
         type: "pie",
         marker: { colors: colors, line: { color: "#fff", width: 1 } },
         textinfo: "label+percent",
+        textfont: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
         customdata: formattedVals,
         hovertemplate: "%{label} %{customdata}<br>%{percent}",
         showlegend: true
       };
       const layout = {
-        title: "Distribución de Ubicaciones por Estado",
-        titlefont: { size: 16 },
-        legend: { orientation: "v", x: 1.02, y: 0.5 },
-        margin: { t: 60, b: 20, l: 20, r: 100 }
+        title: {
+          text: "<b>Distribución de Ubicaciones por Estado</b>",
+          font: {
+            size: 20,
+            family: "Arial Black, Arial, sans-serif",
+            color: "#000"
+          }
+        },
+        font: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
+        legend: {
+          orientation: "v",
+          x: 1.02,
+          y: 0.5,
+          font: {
+            size: 14,
+            family: "Arial Black, Arial, sans-serif",
+            color: "#000"
+          }
+        },
+        margin: { t: 80, b: 20, l: 20, r: 100 }
       };
       Plotly.newPlot("chartResumenEstado", [trace], layout, {
         responsive: true,
@@ -1027,120 +1158,116 @@
       });
     }
 
-    // Modificación de cargarYResumenUbicacionesPorEstado para incluir la tabla de TRANSITO
+    // ----------------------------------------------------------
+    // 5) Sección TRANSITO (usar CSV Adicional)
+    // ----------------------------------------------------------
+    function poblarFiltroBodegaTransito() {
+      const select = document.getElementById("filtroBodegaTransito");
+      const bodegas = new Set();
 
-function cargarYResumenUbicacionesPorEstado() {
-  Plotly.d3.csv(CSV_URL_ADICIONAL, function(err, rows) {
-    if (err) {
-      console.error("Error al cargar el CSV adicional:", err);
-      document.getElementById("tablaResumenEstado").innerText = "No se pudieron cargar los datos.";
-      return;
-    }
-    if (!rows || rows.length < 1) {
-      document.getElementById("tablaResumenEstado").innerText = "No hay datos.";
-      return;
-    }
-
-    datosCsvAdicional = rows.slice(0, 812).map(r => {
-      const norm = {};
-      Object.keys(r).forEach(k => {
-        norm[k.trim()] = r[k].trim();
+      datosCsvAdicional.forEach(r => {
+        const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
+        const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
+        if (rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") {
+          if (r["BODEGA"]) bodegas.add(r["BODEGA"]);
+        }
       });
-      return norm;
-    });
 
-    poblarFiltrosCsvAdicional();
-    generarResumenEstado();
-    poblarFiltroBodegaTransito();
-    generarTablaTransito(); // Nueva llamada
-  });
-}
-function poblarFiltroBodegaTransito() {
-  const select = document.getElementById("filtroBodegaTransito");
-  const bodegas = new Set();
+      Array.from(bodegas).sort().forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b;
+        opt.text = b;
+        select.appendChild(opt);
+      });
 
-  datosCsvAdicional.forEach(r => {
-    const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
-    const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
-    if (rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") {
-      if (r["BODEGA"]) bodegas.add(r["BODEGA"]);
+      select.addEventListener("change", generarTablaTransito);
     }
-  });
 
-  Array.from(bodegas).sort().forEach(b => {
-    const opt = document.createElement("option");
-    opt.value = b;
-    opt.text = b;
-    select.appendChild(opt);
-  });
+    function generarTablaTransito() {
+      const bodegaFiltro = document.getElementById("filtroBodegaTransito").value;
 
-  select.addEventListener("change", generarTablaTransito);
-}
-function generarTablaTransito() {
-  const bodegaFiltro = document.getElementById("filtroBodegaTransito").value;
+      const conteoPorEstado = datosCsvAdicional.reduce((acc, r) => {
+        const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
+        const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
+        const bodegaRaw = r["BODEGA"]?.trim(); 
 
-  const conteoPorEstado = datosCsvAdicional.reduce((acc, r) => {
-    const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
-    const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
-    const bodegaRaw = r["BODEGA"]?.trim();
+        if ((rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") &&
+            (bodegaFiltro === "Todas" || bodegaFiltro === bodegaRaw)) {
+          acc[estadoRaw] = (acc[estadoRaw] || 0) + 1;
+        }
+        return acc;
+      }, {});
 
-    if ((rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") &&
-        (bodegaFiltro === "Todas" || bodegaFiltro === bodegaRaw)) {
-      acc[estadoRaw] = (acc[estadoRaw] || 0) + 1;
+      const estados = Object.keys(conteoPorEstado);
+      const total = estados.reduce((sum, key) => sum + conteoPorEstado[key], 0);
+
+      let htmlTransito = `<table>
+                            <thead>
+                              <tr>
+                                <th>ESTADO</th>
+                                <th>UBICACIONES</th>
+                                <th>% DEL TOTAL</th>
+                              </tr>
+                            </thead>
+                            <tbody>`;
+
+      estados.forEach(est => {
+        const pct = ((conteoPorEstado[est] / total) * 100).toFixed(1) + " %";
+        htmlTransito += `<tr>
+                           <td>${est}</td>
+                           <td>${conteoPorEstado[est]}</td>
+                           <td>${pct}</td>
+                         </tr>`;
+      });
+
+      htmlTransito += `<tr class="total-row">
+                         <td><strong>Total</strong></td>
+                         <td><strong>${total}</strong></td>
+                         <td><strong>100 %</strong></td>
+                       </tr>`;
+
+      htmlTransito += `</tbody></table>`;
+
+      document.getElementById("tablaTransito").innerHTML = htmlTransito;
+
+      const trace = {
+        labels: estados,
+        values: estados.map(est => conteoPorEstado[est]),
+        type: "pie",
+        textinfo: "label+percent",
+        textfont: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
+        hoverinfo: "label+value+percent",
+      };
+
+      const layout = {
+        title: {
+          text: "<b>Distribución de Ubicaciones TRANSITO</b>",
+          font: {
+            size: 20,
+            family: "Arial Black, Arial, sans-serif",
+            color: "#000"
+          }
+        },
+        font: {
+          size: 14,
+          family: "Arial Black, Arial, sans-serif",
+          color: "#000"
+        },
+        margin: { t: 80, b: 20, l: 20, r: 20 }
+      };
+
+      Plotly.newPlot("chartTransito", [trace], layout, {
+        responsive: true,
+        displayModeBar: false
+      });
     }
-    return acc;
-  }, {});
-
-  const estados = Object.keys(conteoPorEstado);
-  const total = estados.reduce((sum, key) => sum + conteoPorEstado[key], 0);
-
-  let htmlTransito = `<table>
-                        <thead>
-                          <tr>
-                            <th>ESTADO</th>
-                            <th>UBICACIONES</th>
-                            <th>% DEL TOTAL</th>
-                          </tr>
-                        </thead>
-                        <tbody>`;
-
-  estados.forEach(est => {
-    const pct = ((conteoPorEstado[est] / total) * 100).toFixed(1) + " %";
-    htmlTransito += `<tr>
-                       <td>${est}</td>
-                       <td>${conteoPorEstado[est]}</td>
-                       <td>${pct}</td>
-                     </tr>`;
-  });
-
-  htmlTransito += `<tr class="total-row">
-                     <td><strong>Total</strong></td>
-                     <td><strong>${total}</strong></td>
-                     <td><strong>100 %</strong></td>
-                   </tr>`;
-
-  htmlTransito += `</tbody></table>`;
-
-  document.getElementById("tablaTransito").innerHTML = htmlTransito;
-
-  const trace = {
-    labels: estados,
-    values: estados.map(est => conteoPorEstado[est]),
-    type: "pie",
-    textinfo: "label+percent",
-    hoverinfo: "label+value+percent",
-  };
-
-  const layout = {
-    title: "Distribución de Ubicaciones TRANSITO",
-    margin: { t: 60, b: 20, l: 20, r: 20 }
-  };
-
-  Plotly.newPlot("chartTransito", [trace], layout);
-}
 
     // ----------------------------------------------------------
-    // Cerrar modal
+    // 6) Cerrar modal
     // ----------------------------------------------------------
     document.getElementById("modalClose").addEventListener("click", () => {
       document.getElementById("productModal").style.display = "none";
