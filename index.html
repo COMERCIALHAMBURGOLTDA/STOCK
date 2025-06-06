@@ -342,25 +342,6 @@
       </div>
     </div>
 
-    <!-- UBICACIONES EN TRANSITO -->
-    <div class="section narrow-section" id="sectionTransito">
-      <div class="section-header">
-        <h2>RESUMEN UBICACIONES TRANSITO</h2>
-      </div>
-      <div class="filters">
-        <div class="filter-group">
-          <label for="filtroBodegaTransito">Bodega:</label>
-          <select id="filtroBodegaTransito">
-            <option value="Todas">Todas</option>
-          </select>
-        </div>
-      </div>
-      <div id="tablaTransito"></div>
-      <div class="chart-container">
-        <div id="chartTransito" style="width:100%; height:100%;"></div>
-      </div>
-    </div>
-
   </div>
 
   <!-- MODAL PARA MOSTRAR PRODUCTOS -->
@@ -926,10 +907,6 @@
 
         // Generar resumen inicial con filtros “Todas” / “Todos” / “Todos”
         generarResumenEstado();
-
-        // Preparar sección Transito
-        poblarFiltroBodegaTransito();
-        generarTablaTransito();
       });
     }
 
@@ -1159,114 +1136,6 @@
     }
 
     // ----------------------------------------------------------
-    // 5) Sección TRANSITO (usar CSV Adicional)
-    // ----------------------------------------------------------
-    function poblarFiltroBodegaTransito() {
-      const select = document.getElementById("filtroBodegaTransito");
-      const bodegas = new Set();
-
-      datosCsvAdicional.forEach(r => {
-        const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
-        const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
-        if (rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") {
-          if (r["BODEGA"]) bodegas.add(r["BODEGA"]);
-        }
-      });
-
-      Array.from(bodegas).sort().forEach(b => {
-        const opt = document.createElement("option");
-        opt.value = b;
-        opt.text = b;
-        select.appendChild(opt);
-      });
-
-      select.addEventListener("change", generarTablaTransito);
-    }
-
-    function generarTablaTransito() {
-      const bodegaFiltro = document.getElementById("filtroBodegaTransito").value;
-
-      const conteoPorEstado = datosCsvAdicional.reduce((acc, r) => {
-        const rackeoRaw = (r["RACKEO"] || "").trim().toUpperCase();
-        const estadoRaw = (r["ESTADO"] || "").trim().toUpperCase();
-        const bodegaRaw = r["BODEGA"]?.trim(); 
-
-        if ((rackeoRaw === "TRANSITO" || estadoRaw === "TRANSITO") &&
-            (bodegaFiltro === "Todas" || bodegaFiltro === bodegaRaw)) {
-          acc[estadoRaw] = (acc[estadoRaw] || 0) + 1;
-        }
-        return acc;
-      }, {});
-
-      const estados = Object.keys(conteoPorEstado);
-      const total = estados.reduce((sum, key) => sum + conteoPorEstado[key], 0);
-
-      let htmlTransito = `<table>
-                            <thead>
-                              <tr>
-                                <th>ESTADO</th>
-                                <th>UBICACIONES</th>
-                                <th>% DEL TOTAL</th>
-                              </tr>
-                            </thead>
-                            <tbody>`;
-
-      estados.forEach(est => {
-        const pct = ((conteoPorEstado[est] / total) * 100).toFixed(1) + " %";
-        htmlTransito += `<tr>
-                           <td>${est}</td>
-                           <td>${conteoPorEstado[est]}</td>
-                           <td>${pct}</td>
-                         </tr>`;
-      });
-
-      htmlTransito += `<tr class="total-row">
-                         <td><strong>Total</strong></td>
-                         <td><strong>${total}</strong></td>
-                         <td><strong>100 %</strong></td>
-                       </tr>`;
-
-      htmlTransito += `</tbody></table>`;
-
-      document.getElementById("tablaTransito").innerHTML = htmlTransito;
-
-      const trace = {
-        labels: estados,
-        values: estados.map(est => conteoPorEstado[est]),
-        type: "pie",
-        textinfo: "label+percent",
-        textfont: {
-          size: 14,
-          family: "Arial Black, Arial, sans-serif",
-          color: "#000"
-        },
-        hoverinfo: "label+value+percent",
-      };
-
-      const layout = {
-        title: {
-          text: "<b>Distribución de Ubicaciones TRANSITO</b>",
-          font: {
-            size: 20,
-            family: "Arial Black, Arial, sans-serif",
-            color: "#000"
-          }
-        },
-        font: {
-          size: 14,
-          family: "Arial Black, Arial, sans-serif",
-          color: "#000"
-        },
-        margin: { t: 80, b: 20, l: 20, r: 20 }
-      };
-
-      Plotly.newPlot("chartTransito", [trace], layout, {
-        responsive: true,
-        displayModeBar: false
-      });
-    }
-
-    // ----------------------------------------------------------
     // 6) Cerrar modal
     // ----------------------------------------------------------
     document.getElementById("modalClose").addEventListener("click", () => {
@@ -1279,3 +1148,4 @@
   </script>
 </body>
 </html>
+
