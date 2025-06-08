@@ -814,66 +814,82 @@
       document.getElementById("productModal").style.display = "block";
     }
 
-    function dibujarGraficoCircular(containerId, labels, values, title) {
-      const truncatedValues = values.map(v => Math.trunc(v));
-      const formattedVals = truncatedValues.map(v =>
-        "$" + v.toLocaleString("es-CL", { minimumFractionDigits: 0 })
-      );
+ function dibujarGraficoCircular(containerId, labels, values, title) {
+  // 1) Redondeamos valores para el gráfico
+  const truncatedValues = values.map(v => Math.trunc(v));
+  // 2) Para el hover seguimos usando customdata con formato $…
+  const formattedVals = truncatedValues.map(v =>
+    "$" + v.toLocaleString("es-CL", { minimumFractionDigits: 0 })
+  );
+  // 3) Calculamos total y porcentaje por slice
+  const total = truncatedValues.reduce((a,b) => a + b, 0);
+  const customText = labels.map((_, i) => {
+    const pct = total > 0 ? (truncatedValues[i] / total) * 100 : 0;
+    // si es <1, un decimal; si no, entero
+    return pct < 1
+      ? pct.toFixed(1)  + "%"
+      : Math.round(pct) + "%";
+  });
 
-      const palette = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
-      ];
-      const colors = labels.map((_, i) => palette[i % palette.length]);
+  const palette = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+  ];
+  const colors = labels.map((_, i) => palette[i % palette.length]);
 
-      const trace = {
-        labels: labels,
-        values: truncatedValues,
-        type: "pie",
-        marker: { colors: colors, line: { color: "#fff", width: 1 } },
-        textinfo: "label+percent",
-        textfont: {
-          size: 14,
-          family: "Arial Black, Arial, sans-serif",
-          color: "#000"
-        },
-        customdata: formattedVals,
-        hovertemplate: "%{label} %{customdata}<br>%{percent}",
-        showlegend: true
-      };
+  const trace = {
+    type: "pie",
+    labels: labels,
+    values: truncatedValues,
+    marker: { colors: colors, line: { color: "#fff", width: 1 } },
 
-      const layout = {
-        title: {
-          text: title,
-          font: {
-            size: 20,
-            family: "Arial Black, Arial, sans-serif",
-            color: "#000"
-          }
-        },
-        font: {
-          size: 14,
-          family: "Arial Black, Arial, sans-serif",
-          color: "#000"
-        },
-        legend: {
-          orientation: "v",
-          x: 1.02,
-          y: 0.5,
-          font: {
-            size: 14,
-            family: "Arial Black, Arial, sans-serif",
-            color: "#000"
-          }
-        },
-        margin: { t: 80, b: 20, l: 20, r: 100 }
-      };
+    // <<< aquí usamos nuestro texto personalizado >>>
+    text: customText,
+    textinfo: "label+text",           // muestra el label y nuestro texto
+    textposition: "auto",             // deja que Plotly elija inside/outside
+    insidetextorientation: "radial",  // mejora legibilidad en slices angostos
+    automargin: true,                 // ajusta márgenes para no recortar textos
 
-      Plotly.newPlot(containerId, [trace], layout, {
-        responsive: true,
-        displayModeBar: false
-      });
-    }
+    // mantenemos el hover con $ y % completos
+    customdata: formattedVals,
+    hovertemplate: "%{label} %{customdata}<br>%{percent}",
+
+    showlegend: true
+  };
+
+  const layout = {
+    title: {
+      text: title,
+      font: {
+        size: 20,
+        family: "Arial Black, Arial, sans-serif",
+        color: "#000"
+      }
+    },
+    font: {
+      size: 14,
+      family: "Arial Black, Arial, sans-serif",
+      color: "#000"
+    },
+    legend: {
+      orientation: "v",
+      x: 1.02,
+      y: 0.5,
+      font: {
+        size: 14,
+        family: "Arial Black, Arial, sans-serif",
+        color: "#000"
+      }
+    },
+    margin: { t: 80, b: 40, l: 20, r: 100 }
+  };
+
+  Plotly.newPlot(containerId, [trace], layout, {
+    responsive: true,
+    displayModeBar: false
+  });
+}
+
 
     // ----------------------------------------------------------
     // 4) Cargar CSV adicional, normalizar cabeceras y preparar filtros, resumen
@@ -1148,4 +1164,3 @@
   </script>
 </body>
 </html>
-
